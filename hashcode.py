@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from math import e, ceil
+from random import randint
 
 
 class Library:
@@ -35,9 +35,11 @@ def parse_input(input_path: str):
 
         # scores = -days + sum(scores) * book_number / book_by_day
 
-        score = -days + (book_number / book_by_day) * (sum(scores) / book_number)
+        scoreValueBook = (book_number / book_by_day) * (sum(scores) / book_number)
 
-        libraries.append((score, i, days, book_by_day, books, book_sorted))
+        libraries.append((
+            -days, scoreValueBook, randint(0, 100),
+            i, days, book_by_day, books, book_sorted))
 
     return book_number, library_number, max_day_number, libraries
 
@@ -95,7 +97,7 @@ def compute_simple(book_number: int, library_number: int, max_day_number: int, l
 def compute_stupid(book_number: int, library_number: int, max_day_number: int, libraries: List[Tuple[int, int, int, List[int], List[int]]], output: str):
     computed_books = set()
     libs_output = {}
-    for score, i, days, book_by_day, books, book_sorted in sorted(libraries, reverse=True):
+    for _, _, _, i, days, book_by_day, books, book_sorted in sorted(libraries, reverse=True):
         book_filtered = []
         for book in book_sorted:
             if book not in computed_books:
@@ -104,7 +106,7 @@ def compute_stupid(book_number: int, library_number: int, max_day_number: int, l
 
         libs_output[i] = book_filtered
 
-    out = ""  # f"{len(libs_output)}"
+    out = ""
     for idx, books in libs_output.items():
         if len(books) < 1:
             continue
