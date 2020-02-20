@@ -24,12 +24,6 @@ def parse_input(input_path: str):
         book_number, days, book_by_day = map(int, content[i * 2].split(" "))
         books = list(map(int, content[i * 2 + 1].split(" ")))
 
-        # books_with_score = []
-        # for book in books:
-        #     if book not in book_added:
-        #         book_added.add(book)
-        #         books_with_score.append((book_scores[book], book))
-        # books_with_score = sorted(books_with_score, reverse=True)
         books_with_score = sorted([(book_scores[book], book) for book in books], reverse=True)
         scores, book_sorted = list(zip(*books_with_score))
 
@@ -38,7 +32,7 @@ def parse_input(input_path: str):
         scoreValueBook = (book_number / book_by_day) * (sum(scores) / book_number)
 
         libraries.append((
-            -days, scoreValueBook, randint(0, 100),
+            -days + (book_number / book_by_day), scoreValueBook, int(book_number / book_by_day), int(sum(scores) / book_number),
             i, days, book_by_day, books, book_sorted))
 
     return book_number, library_number, max_day_number, libraries
@@ -97,7 +91,7 @@ def compute_simple(book_number: int, library_number: int, max_day_number: int, l
 def compute_stupid(book_number: int, library_number: int, max_day_number: int, libraries: List[Tuple[int, int, int, List[int], List[int]]], output: str):
     computed_books = set()
     libs_output = {}
-    for _, _, _, i, days, book_by_day, books, book_sorted in sorted(libraries, reverse=True):
+    for _, _, _, _, i, days, book_by_day, books, book_sorted in sorted(libraries, reverse=True):
         book_filtered = []
         for book in book_sorted:
             if book not in computed_books:
@@ -105,6 +99,7 @@ def compute_stupid(book_number: int, library_number: int, max_day_number: int, l
                 book_filtered.append(book)
 
         libs_output[i] = book_filtered
+        # libs_output[i] = book_sorted
 
     out = ""
     for idx, books in libs_output.items():
