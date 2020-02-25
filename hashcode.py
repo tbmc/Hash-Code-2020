@@ -1,15 +1,55 @@
-from typing import List, Tuple
-from random import randint
+from typing import List, Tuple, Set, Any
+from operator import itemgetter
+
+LibraryType = Tuple[int, int, int, List[Tuple[int, int]]]
+LibrariesType = List[LibraryType]
+ListBooksWithScoreType = List[Tuple[int, int]]
+ListBooks = List[int]
+ListOutputType = List[Tuple[int, List[int]]]
+
+# max with books
+# Trier les livres par ceux qui ont le plus de points
+# trouver tous les doubles et récupérer là ou c'est le mieux
 
 
-class Library:
-    id: int
-    signup_days: int
-    book_by_day: int
-    books: List[int]
+def max_score_for_lib(max_day: int, signup: int, books_with_score: List[Tuple[int, int]], book_by_day: int, book_already_done: Set[int]) -> Tuple[int, ListBooksWithScoreType]:
+    books_with_score = list(
+        filter(
+            lambda x: x not in book_already_done,
+            books_with_score,
+        )
+    )
+    books_with_score = sorted(books_with_score, reverse=True)
+    days_for_book_scan = max_day - signup
+    if days_for_book_scan < 1:
+        return 0, []
+    books = books_with_score[:days_for_book_scan * book_by_day]
+    return sum(map(itemgetter(0), books)), books
 
 
-def parse_input(input_path: str):
+def compute(max_day_number: int, libraries: LibrariesType):
+    already_done: Set[int] = set()
+    nbr_days = 0
+    output: ListOutputType = []
+
+    def compute_max_score_for_lib(lib: LibraryType) -> Tuple[int, ListBooksWithScoreType, LibraryType]:
+        i, signup_days, book_by_day, books_with_score = lib
+        score, books = max_score_for_lib(max_day_number, signup_days, books_with_score, book_by_day, already_done)
+        return score, books, lib
+
+    libs = sorted(list(map(compute_max_score_for_lib, libraries)), reverse=True)
+
+    while nbr_days < max_day_number and len(libs) > 0:
+        (score, books, lib), *libs = libs
+        i, signup_days, book_by_day, books_with_score = lib
+        nbr_days += signup_days
+        already_done.update(set(map(itemgetter(1), books)))
+        output.append((i, list(map(itemgetter(1), books))))
+
+    return output
+
+
+def parse_input(input_path: str) -> Tuple[int, int, int, LibrariesType]:
     with open(input_path) as f:
         content = f.read().split("\n")
 
@@ -17,101 +57,24 @@ def parse_input(input_path: str):
     book_scores = list(map(int, content[1].split(" ")))
 
     content = content[2:]
-    libraries = []
-    book_added = set()
+    libraries: LibrariesType = []
 
     for i in range(library_number):
-        book_number, days, book_by_day = map(int, content[i * 2].split(" "))
+        book_number, signup_days, book_by_day = map(int, content[i * 2].split(" "))
         books = list(map(int, content[i * 2 + 1].split(" ")))
-
         books_with_score = sorted([(book_scores[book], book) for book in books], reverse=True)
-        scores, book_sorted = list(zip(*books_with_score))
-
-        # scores = -days + sum(scores) * book_number / book_by_day
-
-        scoreValueBook = (book_number / book_by_day) * (sum(scores) / book_number)
-
-        libraries.append((
-            -days + (book_number / book_by_day), scoreValueBook, int(book_number / book_by_day), int(sum(scores) / book_number),
-            i, days, book_by_day, books, book_sorted))
+        libraries.append((i, signup_days, book_by_day, books_with_score))
 
     return book_number, library_number, max_day_number, libraries
 
 
-def compute_simple(book_number: int, library_number: int, max_day_number: int, libraries: List[Tuple[int, int, int, List[int], List[int]]], output: str):
-    lib_in_progress = None
-    lib_signup = {}
-    computed_books = set()
-    libs_output = {}
-
-    for current_day in range(max_day_number):
-        if lib_in_progress is not None:  # avant ou après la boucle
-            idx, day_start = lib_in_progress
-            i, days, book_by_day, books, book_sorted = libraries[idx]
-            if day_start + days <= current_day:
-                lib_signup[idx] = []
-                lib_in_progress = None
-
-        if lib_in_progress is None:
-            for i, days, book_by_day, books, book_sorted in libraries:
-                if i == lib_in_progress or i in lib_signup:
-                    continue
-                if current_day + days <= max_day_number:
-                    lib_in_progress = i, current_day
-                    break
-
-        for i, books_done in lib_signup.items():
-            i, days, book_by_day, books, book_sorted = libraries[i]
-            for _ in range(book_by_day):
-                for book in book_sorted:
-                    if book in computed_books:
-                        continue
-                    computed_books.add(book)
-                    if i not in libs_output:
-                        libs_output[i] = []
-                    libs_output[i].append(book)
-
-    out = f"{len(libs_output)}"
-    for idx, books in libs_output.items():
+def write_output(output_name: str, output: ListOutputType):
+    out = f"{len(output)}"
+    for idx, books in output:
         out += f"\n{idx} {len(books)}\n"
         out += " ".join(map(str, books))
 
-    with open(output, "w") as f:
-        f.write(out)
-
-
-
-
-
-    # for i, days, book_by_day, books, book_sorted in libraries:
-    #     if day_number + days <= max_day_number:
-    #         day_number += days
-
-
-def compute_stupid(book_number: int, library_number: int, max_day_number: int, libraries: List[Tuple[int, int, int, List[int], List[int]]], output: str):
-    computed_books = set()
-    libs_output = {}
-    for _, _, _, _, i, days, book_by_day, books, book_sorted in sorted(libraries, reverse=True):
-        book_filtered = []
-        for book in book_sorted:
-            if book not in computed_books:
-                computed_books.add(book)
-                book_filtered.append(book)
-
-        libs_output[i] = book_filtered
-        # libs_output[i] = book_sorted
-
-    out = ""
-    for idx, books in libs_output.items():
-        if len(books) < 1:
-            continue
-        out += f"\n{idx} {len(books)}\n"
-        out += " ".join(map(str, books))
-
-    ll = len(out.split('\n'))
-    out = f"{int(ll / 2)}{out}"
-
-    with open(output, "w") as f:
+    with open(output_name, "w") as f:
         f.write(out)
 
 
@@ -126,6 +89,8 @@ names = [
 
 for name in names:
     print(name)
-    l = parse_input("in/" + name)
-    compute_stupid(*l, f"out/{name}.out")
+    _, _, max_day, libraries = parse_input("in/" + name)
+    output = compute(max_day, libraries)
+    write_output(f"out/{name}.out", output)
+
 
